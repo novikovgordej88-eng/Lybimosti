@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Для Киры ✨</title>
+<style>
+:root{--bg1:#fde7f3;--bg2:#e6e0ff;--ink:#3b2a4d;--card:#ffffff;--accent:#e0559b;--soft:#7a5c8f;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg1:#2a1738;--bg2:#171a3a;--ink:#f6e9ff;--card:#3a2450;--accent:#ff7fbc;--soft:#c9a8e0}}
+:root[data-theme="dark"]{--bg1:#2a1738;--bg2:#171a3a;--ink:#f6e9ff;--card:#3a2450;--accent:#ff7fbc;--soft:#c9a8e0}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:linear-gradient(160deg,var(--bg1),var(--bg2));background-color:var(--bg1);overflow:hidden;user-select:none}
+#app{position:relative;height:100%;width:100%}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;gap:14px}
+h1{margin:0;font-size:clamp(26px,7vw,40px)}
+p{margin:0;color:var(--soft);font-size:17px;line-height:1.45;max-width:420px}
+button{font:inherit;font-weight:600;font-size:18px;border:0;border-radius:999px;padding:14px 32px;background:var(--accent);color:#fff;cursor:pointer;box-shadow:0 6px 18px rgba(224,85,155,.35)}
+button:active{transform:scale(.96)}
+.hidden{display:none!important}
+#hud{position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);left:0;right:0;text-align:center;font-weight:700;font-size:20px;z-index:5;pointer-events:none}
+#bar{width:180px;height:10px;border-radius:9px;background:rgba(150,110,180,.25);margin:8px auto 0;overflow:hidden}
+#fill{height:100%;width:0;background:var(--accent);transition:width .25s}
+.star{position:absolute;font-size:44px;cursor:pointer;touch-action:manipulation;will-change:transform}
+.pop{position:absolute;font-size:30px;pointer-events:none;animation:pop .6s ease-out forwards}
+@keyframes pop{to{transform:translateY(-60px) scale(1.5);opacity:0}}
+#env{font-size:110px;cursor:pointer;animation:bob 1.2s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-14px) rotate(4deg)}}
+#card{background:var(--card);border-radius:22px;padding:26px 22px;max-width:360px;width:100%;box-shadow:0 14px 40px rgba(80,40,110,.25);animation:rise .7s cubic-bezier(.2,1.2,.3,1)}
+@keyframes rise{from{transform:translateY(60px) scale(.9);opacity:0}}
+#card h2{margin:0 0 10px;font-size:26px;color:var(--accent)}
+#card p{color:var(--ink);max-width:none}
+#wish{min-height:70px;margin:14px 0;font-weight:600;color:var(--accent)}
+.conf{position:fixed;top:-30px;font-size:26px;pointer-events:none;animation:fall linear forwards;z-index:20}
+@keyframes fall{to{transform:translateY(110vh) rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="start" class="screen">
+    <div style="font-size:64px">🌙</div>
+    <h1>Привет, Кира!</h1>
+    <p>Для тебя есть маленькая игра. Лови падающие звёздочки и собери 12 штук — тогда откроется сюрприз.</p>
+    <button id="go">Играть ✨</button>
+  </div>
+
+  <div id="hud" class="hidden"><div>⭐ <span id="sc">0</span> / 12</div><div id="bar"><div id="fill"></div></div></div>
+  <div id="field" class="hidden screen" style="padding:0"></div>
+
+  <div id="envScreen" class="screen hidden">
+    <h1>Ты прошла игру! 🎉</h1>
+    <p>Для тебя пришло письмо. Нажми на конверт.</p>
+    <div id="env">💌</div>
+  </div>
+
+  <div id="cardScreen" class="screen hidden">
+    <div id="card">
+      <h2>Кира, ты супер 💖</h2>
+      <p>Это маленькая открытка просто так. Ты классная подруга: с тобой весело, спокойно и всегда есть о чём поговорить. Спасибо, что ты есть.</p>
+      <div id="wish">Нажми кнопку, чтобы получить пожелание 👇</div>
+      <button id="more">Ещё пожелание ✨</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i)};
+  var field=$('field'),sc=$('sc'),fill=$('fill'),score=0,GOAL=12,running=false,last=0,spawnT=0,items=[];
+  var emojis=['⭐','🌟','✨','💫'];
+  var wishes=['Пусть у тебя всё получается легко 🌈','Желаю тебе много тёплых и уютных вечеров ☕','Ты заслуживаешь самого лучшего 💐','Пусть мечты сбываются быстрее, чем ты ждёшь 🚀','Твоя улыбка делает день лучше 😊','Пусть рядом всегда будут те, кто тебя ценит 🤍','Ты сильнее, чем думаешь 💪'];
+  var wi=0;
+
+  function show(id){['start','field','envScreen','cardScreen'].forEach(function(s){$(s).classList.toggle('hidden',s!==id)});}
+
+  $('go').onclick=function(){
+    show('field');$('hud').classList.remove('hidden');
+    score=0;sc.textContent=0;fill.style.width='0';running=true;last=performance.now();spawnT=0;
+    requestAnimationFrame(loop);
+  };
+
+  function spawn(){
+    var el=document.createElement('div');
+    el.className='star';el.textContent=emojis[Math.floor(Math.random()*emojis.length)];
+    var w=field.clientWidth;
+    var o={el:el,x:Math.random()*(w-60)+8,y:-60,v:90+Math.random()*90+score*6};
+    el.style.left=o.x+'px';el.style.top='0px';
+    el.addEventListener('pointerdown',function(e){e.preventDefault();catchIt(o)});
+    field.appendChild(el);items.push(o);
+  }
+
+  function catchIt(o){
+    if(!running||o.dead)return;
+    o.dead=true;o.el.remove();
+    var p=document.createElement('div');p.className='pop';p.textContent='💖';
+    p.style.left=o.x+'px';p.style.top=o.y+'px';field.appendChild(p);
+    setTimeout(function(){p.remove()},600);
+    score++;sc.textContent=score;fill.style.width=(score/GOAL*100)+'%';
+    if(score>=GOAL)win();
+  }
+
+  function loop(t){
+    if(!running)return;
+    var dt=Math.min((t-last)/1000,.05);last=t;spawnT+=dt;
+    if(spawnT>0.75){spawnT=0;spawn();}
+    var h=field.clientHeight;
+    items=items.filter(function(o){
+      if(o.dead)return false;
+      o.y+=o.v*dt;o.el.style.transform='translateY('+o.y+'px)';
+      if(o.y>h){o.el.remove();return false;}
+      return true;
+    });
+    requestAnimationFrame(loop);
+  }
+
+  function win(){
+    running=false;
+    setTimeout(function(){
+      items.forEach(function(o){o.el.remove()});items=[];
+      $('hud').classList.add('hidden');show('envScreen');confetti();
+    },350);
+  }
+
+  $('env').onclick=function(){show('cardScreen');confetti();};
+  $('more').onclick=function(){$('wish').textContent=wishes[wi%wishes.length];wi++;confetti(10);};
+
+  function confetti(n){
+    n=n||30;var c=['🎉','💖','✨','🌸','⭐','💫'];
+    for(var i=0;i<n;i++){
+      var d=document.createElement('div');d.className='conf';
+      d.textContent=c[Math.floor(Math.random()*c.length)];
+      d.style.left=Math.random()*100+'vw';
+      d.style.animationDuration=(2+Math.random()*2)+'s';
+      d.style.animationDelay=(Math.random()*.6)+'s';
+      document.body.appendChild(d);
+      (function(x){setTimeout(function(){x.remove()},4800)})(d);
+    }
+  }
+})();
+</script>
+</body>
+</html>
